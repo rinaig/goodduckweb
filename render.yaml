@@ -17,6 +17,17 @@ services:
         sync: false
       - key: DATA_DIR
         value: /data
+      # DB settings: activa DB_PROVIDER cuando el código esté migrado a Postgres
+      # - key: DB_PROVIDER
+      #   value: postgres
+      - key: DATABASE_URL
+        fromDatabase:
+          name: goodduck-postgres
+          property: connectionString
+      - key: DATABASE_INTERNAL_URL
+        fromDatabase:
+          name: goodduck-postgres
+          property: connectionStringInternal
       - key: SMTP_HOST
         sync: false
       - key: SMTP_PORT
@@ -31,7 +42,16 @@ services:
         sync: false
       - key: MAIL_TO
         sync: false
+      - key: APP_BASE_URL
+        value: https://goodduckweb.onrender.com
     # disk:               # Si tu plan permite Disk, descomenta y ajusta
     #   name: data
     #   mountPath: /data
     #   sizeGB: 1
+
+databases:
+  - name: goodduck-postgres
+    databaseName: goodduckdb
+    user: goodduck
+    plan: free
+    region: oregon
