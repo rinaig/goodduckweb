@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import nodemailer from 'nodemailer';
+import bcrypt from 'bcryptjs';
 import bodyParser from 'body-parser';
 import multer from 'multer';
 import helmet from 'helmet';
@@ -91,6 +92,12 @@ CREATE TABLE IF NOT EXISTS settings (
   hero_image TEXT,
   updated_at TEXT
 );
+CREATE TABLE IF NOT EXISTS admin_users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  updated_at TEXT
+);
 `);
 
 // Migraciones puntuales
@@ -103,6 +110,21 @@ try {
     db.prepare('UPDATE settings SET hero_image=? WHERE id=1').run('/static/img/diseñoapp.png');
   }
 } catch {}
+
+// Seed admin user if missing
+try {
+  const adminCount = db.prepare('SELECT COUNT(*) as c FROM admin_users').get().c;
+  if (adminCount === 0) {
+    const seedUser = process.env.ADMIN_USER || 'admin';
+    const seedPass = process.env.ADMIN_PASS || 'admin123';
+    const hash = bcrypt.hashSync(seedPass, 10);
+    db.prepare('INSERT INTO admin_users (username, password_hash, updated_at) VALUES (?, ?, ?)')
+      .run(seedUser, hash, new Date().toISOString());
+    console.log('Admin user seeded');
+  }
+} catch (e) {
+  console.warn('No se pudo crear usuario admin:', e.message);
+}
 
 // Ensure column 'image' exists in offers (for older DBs)
 try {
@@ -272,11 +294,11 @@ app.get('/admin/login', (req, res) => {
 });
 
 app.post('/admin/login', (req, res) => {
-  const user = (process.env.ADMIN_USER || 'admin').trim();
-  const pass = (process.env.ADMIN_PASS || 'admin123').trim();
   const { username, password } = req.body;
-  if (username === user && password === pass) {
+  const row = db.prepare('SELECT * FROM admin_users WHERE username = ?').get(username);
+  if (row && bcrypt.compareSync(password, row.password_hash)) {
     req.session.isAdmin = true;
+    req.session.adminUser = row.username;
     return res.redirect('/admin');
   }
   return res.render('admin/login', { title: 'Acceso Admin', error: 'Credenciales inválidas' });
@@ -291,6 +313,29 @@ app.get('/admin', requireAdmin, (req, res) => {
   const offers = getOffers();
   const posts = db.prepare('SELECT * FROM posts ORDER BY created_at DESC').all();
   res.render('admin/index', { offers, posts });
+});
+app.get('/admin/account', requireAdmin, (req, res) => {
+  const user = req.session.adminUser;
+  res.render('admin/account', { title: 'Cuenta', user, error: null, success: null });
+});
+app.post('/admin/account/password', requireAdmin, (req, res) => {
+  const { current_password, new_password, confirm_password } = req.body;
+  const user = req.session.adminUser;
+  const row = db.prepare('SELECT * FROM admin_users WHERE username=?').get(user);
+  if (!row) return res.render('admin/account', { title: 'Cuenta', user, error: 'Usuario no encontrado', success: null });
+  if (!bcrypt.compareSync(current_password, row.password_hash)) {
+    return res.render('admin/account', { title: 'Cuenta', user, error: 'Contraseña actual incorrecta', success: null });
+  }
+  if (new_password !== confirm_password) {
+    return res.render('admin/account', { title: 'Cuenta', user, error: 'Las contraseñas nuevas no coinciden', success: null });
+  }
+  if (new_password.length < 6) {
+    return res.render('admin/account', { title: 'Cuenta', user, error: 'La nueva contraseña debe tener al menos 6 caracteres', success: null });
+  }
+  const hash = bcrypt.hashSync(new_password, 10);
+  db.prepare('UPDATE admin_users SET password_hash=?, updated_at=? WHERE id=?')
+    .run(hash, new Date().toISOString(), row.id);
+  return res.render('admin/account', { title: 'Cuenta', user, error: null, success: 'Contraseña actualizada correctamente' });
 });
 // Settings admin
 app.get('/admin/settings', requireAdmin, (req, res) => {

@@ -1,0 +1,24 @@
+<section style="padding:20px 0">
+  <h1 style="color:#fff;margin:0 0 20px">Cuenta Administrador</h1>
+  <p style="color:#9fb0c4;margin:0 0 16px">Usuario actual: <strong style="color:#fff"><%= user %></strong></p>
+  <% if (error) { %><div style="background:#3a1f1f;color:#ffb4b4;padding:10px;border-radius:8px;margin-bottom:12px"><%= error %></div><% } %>
+  <% if (success) { %><div style="background:#1f3a29;color:#b4ffce;padding:10px;border-radius:8px;margin-bottom:12px"><%= success %></div><% } %>
+  <form method="post" action="/admin/account/password" style="display:grid;gap:12px;max-width:420px">
+    <div>
+      <label style="display:block;margin-bottom:4px">Contraseña actual</label>
+      <input type="password" name="current_password" class="btn" style="background:#0b0f14;width:100%" required />
+    </div>
+    <div>
+      <label style="display:block;margin-bottom:4px">Nueva contraseña</label>
+      <input type="password" name="new_password" class="btn" style="background:#0b0f14;width:100%" required />
+    </div>
+    <div>
+      <label style="display:block;margin-bottom:4px">Confirmar nueva contraseña</label>
+      <input type="password" name="confirm_password" class="btn" style="background:#0b0f14;width:100%" required />
+    </div>
+    <button class="btn primary" type="submit">Actualizar contraseña</button>
+  </form>
+  <div style="margin-top:24px">
+    <a href="/admin" class="btn">Volver al panel</a>
+  </div>
+</section>
