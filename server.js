@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import dotenv from 'dotenv';
 import bodyParser from 'body-parser';
 import multer from 'multer';
@@ -15,7 +16,19 @@ const app = express();
 app.locals.isProd = process.env.NODE_ENV === 'production';
 // Si se despliega detrás de proxy (Render/Heroku/nginx)
 app.set('trust proxy', 1);
-const db = new Database(path.join(process.cwd(), 'content.db'));
+
+// Directorio de datos (para persistencia en Render si se monta un Disk)
+const dataDir = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : process.cwd();
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+const dbPath = path.join(dataDir, 'content.db');
+const uploadsDir = path.join(dataDir, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const db = new Database(dbPath);
 
 // Ensure tables
 db.exec(`
@@ -96,6 +109,9 @@ app.use(expressLayouts);
 app.set('layout', path.join('layouts', 'main'));
 
 // Static
+// Servir primero /static/uploads desde el directorio de datos (persistente si se monta Disk)
+app.use('/static/uploads', express.static(uploadsDir));
+// Luego el resto de /static desde la carpeta pública del proyecto
 app.use('/static', express.static(path.join(process.cwd(), 'public')));
 // Seguridad básica
 app.use(helmet({ contentSecurityPolicy: false }));
@@ -126,9 +142,9 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 // Uploads
-// Subidas guardadas en public/uploads para servir estáticamente
+// Subidas guardadas en uploadsDir para servir por /static/uploads
 const upload = multer({
-  dest: path.join(process.cwd(), 'public', 'uploads'),
+  dest: uploadsDir,
   limits: { fileSize: 3 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ok = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(file.mimetype);

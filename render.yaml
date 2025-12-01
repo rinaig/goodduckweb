@@ -15,3 +15,9 @@ services:
         sync: false
       - key: ADMIN_SESSION_SECRET
         sync: false
+      - key: DATA_DIR
+        value: /data
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
