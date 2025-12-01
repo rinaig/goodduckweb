@@ -1,0 +1,21 @@
+<div class="container" style="max-width:480px;margin:40px auto;">
+  <h2><%= title %></h2>
+  <% if (error) { %>
+    <div style="color:#b00020; margin:10px 0;"><%= error %></div>
+  <% } %>
+  <% if (done) { %>
+    <p>Contraseña actualizada correctamente.</p>
+    <p><a href="/admin/login">Ir a login</a></p>
+  <% } else if (token) { %>
+    <form method="post" action="/admin/reset/<%= token %>" style="display:flex;flex-direction:column;gap:12px;">
+      <label>Nueva contraseña</label>
+      <input type="password" name="new_password" required />
+      <label>Confirmar contraseña</label>
+      <input type="password" name="confirm_password" required />
+      <button class="btn primary" type="submit">Actualizar</button>
+    </form>
+  <% } else { %>
+    <p>El token no es válido o ha expirado.</p>
+    <p><a href="/admin/forgot">Solicitar un nuevo enlace</a></p>
+  <% } %>
+</div>

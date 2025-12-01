@@ -11,11 +11,15 @@
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
     <div class="card">
       <h3>Nuestros Productos</h3>
-      <form method="post" action="/admin/offers" style="display:grid;gap:8px;margin-bottom:10px">
+      <form method="post" action="/admin/offers" style="display:grid;gap:8px;margin-bottom:10px" onsubmit="return syncEditors(this)">
         <input name="title" placeholder="Título" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" required />
         <input name="slug" placeholder="Slug" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" required />
         <input name="summary" placeholder="Resumen" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" />
-        <textarea name="content" placeholder="Contenido" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c"></textarea>
+        <div data-editor>
+          <div class="quill" style="background:#fff;color:#000"></div>
+          <textarea name="content" hidden></textarea>
+          <button type="button" class="btn" onclick="openMediaPicker(this)">Insertar imagen</button>
+        </div>
         <button class="btn primary" type="submit">Crear</button>
       </form>
       <ul style="display:grid;gap:10px">
@@ -36,11 +40,15 @@
             <form method="post" action="/admin/offers/<%= o.id %>/delete"><button class="btn" style="background:#182332;color:#fff" type="submit">Eliminar</button></form>
             <details style="grid-column:1/-1;margin-top:8px">
               <summary style="cursor:pointer;color:#eaf1f7">Editar oferta</summary>
-              <form method="post" action="/admin/offers/<%= o.id %>/edit" style="display:grid;gap:8px;margin-top:8px">
+              <form method="post" action="/admin/offers/<%= o.id %>/edit" style="display:grid;gap:8px;margin-top:8px" onsubmit="return syncEditors(this)">
                 <input name="title" value="<%= o.title %>" placeholder="Título" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" />
                 <input name="slug" value="<%= o.slug %>" placeholder="Slug" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" />
                 <input name="summary" value="<%= o.summary || '' %>" placeholder="Resumen" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" />
-                <textarea name="content" placeholder="Contenido" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c"><%= o.content || '' %></textarea>
+                <div data-editor>
+                  <div class="quill" style="background:#fff;color:#000"></div>
+                  <textarea name="content" hidden><%= o.content || '' %></textarea>
+                  <button type="button" class="btn" onclick="openMediaPicker(this)">Insertar imagen</button>
+                </div>
                 <button class="btn primary" type="submit">Guardar cambios</button>
               </form>
             </details>
@@ -50,11 +58,15 @@
     </div>
     <div class="card">
       <h3>Posts</h3>
-      <form method="post" action="/admin/posts" enctype="multipart/form-data" style="display:grid;gap:8px;margin-bottom:10px">
+      <form method="post" action="/admin/posts" enctype="multipart/form-data" style="display:grid;gap:8px;margin-bottom:10px" onsubmit="return syncEditors(this)">
         <input name="title" placeholder="Título" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" required />
         <input name="slug" placeholder="Slug" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" required />
         <input name="excerpt" placeholder="Extracto" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" />
-        <textarea name="content" placeholder="Contenido" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c"></textarea>
+        <div data-editor>
+          <div class="quill" style="background:#fff;color:#000"></div>
+          <textarea name="content" hidden></textarea>
+          <button type="button" class="btn" onclick="openMediaPicker(this)">Insertar imagen</button>
+        </div>
         <input type="file" name="cover" />
         <button class="btn primary" type="submit">Publicar</button>
       </form>
@@ -65,11 +77,15 @@
             <div style="display:flex;gap:8px;align-items:center">
               <details>
                 <summary style="cursor:pointer;color:#eaf1f7">Editar</summary>
-                <form method="post" action="/admin/posts/<%= p.id %>/edit" style="display:grid;gap:8px;margin-top:8px">
+                <form method="post" action="/admin/posts/<%= p.id %>/edit" style="display:grid;gap:8px;margin-top:8px" onsubmit="return syncEditors(this)">
                   <input name="title" value="<%= p.title %>" placeholder="Título" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" />
                   <input name="slug" value="<%= p.slug %>" placeholder="Slug" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" />
                   <input name="excerpt" value="<%= p.excerpt || '' %>" placeholder="Extracto" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" />
-                  <textarea name="content" placeholder="Contenido" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c"><%= p.content || '' %></textarea>
+                  <div data-editor>
+                    <div class="quill" style="background:#fff;color:#000"></div>
+                    <textarea name="content" hidden><%= p.content || '' %></textarea>
+                    <button type="button" class="btn" onclick="openMediaPicker(this)">Insertar imagen</button>
+                  </div>
                   <button class="btn primary" type="submit">Guardar cambios</button>
                 </form>
               </details>
@@ -81,3 +97,57 @@
     </div>
   </div>
 </section>
+
+<!-- Quill editor -->
+<link href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+<style>
+  .media-modal{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;z-index:1000}
+  .media-box{background:#0b0f14;border:1px solid #1b222c;border-radius:10px;padding:16px;max-width:800px;max-height:80vh;overflow:auto}
+  .media-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+  .media-grid img{width:100%;height:90px;object-fit:cover;border-radius:8px;border:1px solid #1b222c;cursor:pointer}
+</style>
+<div class="media-modal" id="mediaModal" onclick="if(event.target===this)this.style.display='none'">
+  <div class="media-box">
+    <h3 style="margin:0 0 10px">Selecciona una imagen</h3>
+    <div class="media-grid" id="mediaGrid"></div>
+  </div>
+ </div>
+<script>
+  const editors = [];
+  function initEditors(){
+    document.querySelectorAll('[data-editor]').forEach(wrapper=>{
+      const textarea = wrapper.querySelector('textarea[name="content"]');
+      const el = wrapper.querySelector('.quill');
+      const q = new Quill(el, { theme:'snow', modules:{ toolbar: [['bold','italic','underline'], [{ 'header': [1, 2, false] }], ['blockquote','code-block'], [{'list':'ordered'},{'list':'bullet'}], ['link','image']] } });
+      if(textarea.value){ q.root.innerHTML = textarea.value; }
+      editors.push({ wrapper, q, textarea });
+    });
+  }
+  function syncEditors(form){
+    editors.forEach(e=>{ if(form.contains(e.wrapper)){ e.textarea.value = e.q.root.innerHTML; }});
+    return true;
+  }
+  let activeEditor = null;
+  async function openMediaPicker(btn){
+    activeEditor = editors.find(e=> e.wrapper.contains(btn));
+    const modal = document.getElementById('mediaModal');
+    const grid = document.getElementById('mediaGrid');
+    grid.innerHTML = 'Cargando...';
+    modal.style.display = 'flex';
+    try{
+      const res = await fetch('/admin/media.json');
+      const data = await res.json();
+      grid.innerHTML = '';
+      (data.media||[]).forEach(m=>{
+        const img = document.createElement('img');
+        img.src = m.url;
+        img.alt = m.filename || '';
+        img.onclick = ()=>{ if(activeEditor){ activeEditor.q.focus(); activeEditor.q.insertEmbed(activeEditor.q.getSelection()?.index || 0, 'image', m.url, 'user'); } modal.style.display='none'; };
+        grid.appendChild(img);
+      });
+      if(grid.children.length===0){ grid.innerHTML = '<p>No hay imágenes aún. Sube una en Media.</p>'; }
+    }catch(e){ grid.innerHTML = '<p>Error cargando media</p>'; }
+  }
+  document.addEventListener('DOMContentLoaded', initEditors);
+</script>

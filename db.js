@@ -140,6 +140,13 @@ export async function ensureSchema(adapter) {
         password_hash TEXT NOT NULL,
         updated_at TIMESTAMPTZ
       );
+      CREATE TABLE IF NOT EXISTS reset_tokens (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
+        token TEXT UNIQUE NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used_at TIMESTAMPTZ
+      );
     `);
     return;
   }
@@ -195,6 +202,13 @@ export async function ensureSchema(adapter) {
       username TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       updated_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS reset_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token TEXT UNIQUE NOT NULL,
+      expires_at TEXT NOT NULL,
+      used_at TEXT
     );
   `);
 }

@@ -1,0 +1,18 @@
+<div class="container" style="max-width:480px;margin:40px auto;">
+  <h2><%= title %></h2>
+  <% if (done) { %>
+    <p>Si el usuario existe, enviamos un correo con el enlace para restablecer la contraseña.</p>
+    <p>Revisa tu casilla y sigue las instrucciones.</p>
+    <p><a href="/admin/login">Volver a login</a></p>
+  <% } else { %>
+    <% if (error) { %>
+      <div style="color:#b00020; margin:10px 0;"><%= error %></div>
+    <% } %>
+    <form method="post" action="/admin/forgot" style="display:flex;flex-direction:column;gap:12px;">
+      <label>Usuario</label>
+      <input type="text" name="username" required />
+      <button class="btn primary" type="submit">Enviar enlace</button>
+    </form>
+    <p style="margin-top:16px"><a href="/admin/login">Volver a login</a></p>
+  <% } %>
+</div>

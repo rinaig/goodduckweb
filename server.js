@@ -10,6 +10,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import sanitizeHtml from 'sanitize-html';
 import session from 'express-session';
+import crypto from 'crypto';
 import { createDbAdapter, ensureSchema } from './db.js';
 import expressLayouts from 'express-ejs-layouts';
 
@@ -130,8 +131,8 @@ async function getRecentPosts(limit = 6) {
 function clamp(str, max) { return (str || '').toString().trim().slice(0, max); }
 function cleanHTML(html) {
   return sanitizeHtml(html || '', {
-    allowedTags: ['b','i','em','strong','a','p','ul','ol','li','br'],
-    allowedAttributes: { a: ['href','target','rel'] },
+    allowedTags: ['b','i','u','em','strong','a','p','ul','ol','li','br','h1','h2','h3','blockquote','code','pre','img'],
+    allowedAttributes: { a: ['href','target','rel'], img: ['src','alt'] },
     transformTags: { a: sanitizeHtml.simpleTransform('a', { rel: 'noopener noreferrer', target: '_blank' }) },
   });
 }
@@ -143,6 +144,7 @@ function cleanSlug(s) {
 // Rate limiting
 const adminLimiter = rateLimit({ windowMs: 15*60*1000, max: 200, standardHeaders: true, legacyHeaders: false });
 const formLimiter = rateLimit({ windowMs: 10*60*1000, max: 100 });
+const resetLimiter = rateLimit({ windowMs: 15*60*1000, max: 20 });
 
 // Routes: Public
 app.get('/', async (req, res) => {
@@ -210,6 +212,56 @@ app.get('/admin', requireAdmin, async (req, res) => {
   const offers = await getOffers();
   const posts = await db.all('SELECT * FROM posts ORDER BY created_at DESC');
   res.render('admin/index', { offers, posts });
+});
+// Forgot/reset password
+app.get('/admin/forgot', (req, res) => {
+  res.render('admin/forgot', { title: 'Recuperar contraseña', done: false, error: null });
+});
+app.post('/admin/forgot', resetLimiter, async (req, res) => {
+  const username = clamp(req.body.username, 120);
+  try {
+    const user = await db.get('SELECT * FROM admin_users WHERE username = ?', [username]);
+    if (user) {
+      const token = crypto.randomBytes(32).toString('hex');
+      const expires = new Date(Date.now() + 60 * 60 * 1000); // 60 min
+      await db.run('INSERT INTO reset_tokens (user_id, token, expires_at) VALUES (?, ?, ?)', [user.id, token, expires.toISOString()]);
+      if (transporter) {
+        const base = process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`;
+        const link = `${base}/admin/reset/${token}`;
+        const to = process.env.MAIL_TO || process.env.SMTP_USER;
+        const from = process.env.MAIL_FROM || 'GOOD DUCK <no-reply@goodduck.local>';
+        const subject = 'Restablecer contraseña - GOOD DUCK';
+        const html = `<p>Hola,</p><p>Usa este enlace para restablecer tu contraseña (válido por 1 hora):</p><p><a href="${link}">${link}</a></p>`;
+        const text = `Restablecer contraseña: ${link}`;
+        await transporter.sendMail({ from, to, subject, text, html });
+      }
+    }
+  } catch (e) {
+    // No revelar detalles
+  }
+  res.render('admin/forgot', { title: 'Recuperar contraseña', done: true, error: null });
+});
+app.get('/admin/reset/:token', async (req, res) => {
+  const t = await db.get('SELECT * FROM reset_tokens WHERE token = ?', [req.params.token]);
+  if (!t || t.used_at) return res.status(400).render('admin/reset', { title: 'Restablecer', token: null, error: 'Token inválido', done: false });
+  const now = Date.now();
+  const exp = new Date(t.expires_at).getTime();
+  if (isNaN(exp) || exp < now) return res.status(400).render('admin/reset', { title: 'Restablecer', token: null, error: 'Token expirado', done: false });
+  res.render('admin/reset', { title: 'Restablecer', token: req.params.token, error: null, done: false });
+});
+app.post('/admin/reset/:token', resetLimiter, async (req, res) => {
+  const { new_password, confirm_password } = req.body;
+  const t = await db.get('SELECT * FROM reset_tokens WHERE token = ?', [req.params.token]);
+  if (!t || t.used_at) return res.status(400).render('admin/reset', { title: 'Restablecer', token: null, error: 'Token inválido', done: false });
+  const now = Date.now();
+  const exp = new Date(t.expires_at).getTime();
+  if (isNaN(exp) || exp < now) return res.status(400).render('admin/reset', { title: 'Restablecer', token: null, error: 'Token expirado', done: false });
+  if (new_password !== confirm_password) return res.render('admin/reset', { title: 'Restablecer', token: req.params.token, error: 'Las contraseñas no coinciden', done: false });
+  if ((new_password || '').length < 6) return res.render('admin/reset', { title: 'Restablecer', token: req.params.token, error: 'Mínimo 6 caracteres', done: false });
+  const hash = bcrypt.hashSync(new_password, 10);
+  await db.run('UPDATE admin_users SET password_hash=?, updated_at=? WHERE id=?', [hash, new Date().toISOString(), t.user_id]);
+  await db.run('UPDATE reset_tokens SET used_at=? WHERE id=?', [new Date().toISOString(), t.id]);
+  res.render('admin/reset', { title: 'Restablecer', token: null, error: null, done: true });
 });
 app.get('/admin/account', requireAdmin, (req, res) => {
   const user = req.session.adminUser;
@@ -311,6 +363,10 @@ app.post('/admin/media', requireAdmin, upload.single('file'), async (req, res) =
     await db.run('INSERT INTO media (filename, url, created_at) VALUES (?, ?, ?)', [f.originalname, url, new Date().toISOString()]);
   }
   res.redirect('/admin/media');
+});
+app.get('/admin/media.json', requireAdmin, async (req, res) => {
+  const media = await db.all('SELECT id, filename, url, created_at FROM media ORDER BY created_at DESC');
+  res.json({ media });
 });
 
 // 404
