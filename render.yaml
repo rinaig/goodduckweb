@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: good-duck-web
+    env: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
