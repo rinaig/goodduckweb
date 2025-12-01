@@ -78,6 +78,17 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 `);
 
+// Migraciones puntuales
+try {
+  const settingsCols = db.prepare("PRAGMA table_info(settings)").all();
+  const hasHero = settingsCols.some(c => c.name === 'hero_image');
+  if (!hasHero) {
+    db.prepare('ALTER TABLE settings ADD COLUMN hero_image TEXT').run();
+    // Set default hero image si falta
+    db.prepare('UPDATE settings SET hero_image=? WHERE id=1').run('/static/img/diseñoapp.png');
+  }
+} catch {}
+
 // Ensure column 'image' exists in offers (for older DBs)
 try {
   const cols = db.prepare("PRAGMA table_info(offers)").all();
@@ -100,7 +111,7 @@ if (countOffers === 0) {
 const settingsRow = db.prepare('SELECT COUNT(*) as c FROM settings').get().c;
 if (settingsRow === 0) {
   db.prepare('INSERT INTO settings (id, phone, whatsapp, instagram, facebook, twitter, email, hero_image, updated_at) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .run('+54 11 0000-0000', 'https://wa.me/541100000000', 'https://instagram.com/', 'https://facebook.com/', 'https://twitter.com/', 'info@goodduck.test', '/static/img/diseñoapp_BAJADA.png', new Date().toISOString());
+    .run('+54 11 0000-0000', 'https://wa.me/541100000000', 'https://instagram.com/', 'https://facebook.com/', 'https://twitter.com/', 'info@goodduck.test', '/static/img/diseñoapp.png', new Date().toISOString());
 }
 
 // View engine
@@ -121,7 +132,7 @@ app.use((req, res, next) => {
   let s = db.prepare('SELECT * FROM settings WHERE id = 1').get();
   if (!s) {
     db.prepare('INSERT INTO settings (id, phone, whatsapp, instagram, facebook, twitter, email, hero_image, updated_at) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .run('+54 11 0000-0000', 'https://wa.me/541100000000', 'https://instagram.com/', 'https://facebook.com/', 'https://twitter.com/', 'info@goodduck.test', '/static/img/diseñoapp_BAJADA.png', new Date().toISOString());
+      .run('+54 11 0000-0000', 'https://wa.me/541100000000', 'https://instagram.com/', 'https://facebook.com/', 'https://twitter.com/', 'info@goodduck.test', '/static/img/diseñoapp.png', new Date().toISOString());
     s = db.prepare('SELECT * FROM settings WHERE id = 1').get();
   }
   res.locals.settings = s;

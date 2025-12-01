@@ -4,7 +4,7 @@
       <h1 class="hero-title">Impulsa tu negocio con soluciones digitales</h1>
       <p class="hero-sub">Sitios web, sistemas y herramientas a medida para Pymes y comercios. Rendimiento, diseño y resultados.</p>
       <div style="display:flex;gap:10px;margin-top:6px">
-        <a class="btn primary" href="#ofertas">Ver Ofertas</a>
+        <a class="btn primary" href="#productos">Ver Nuestros Productos</a>
         <a class="btn" href="#contacto">Contáctanos</a>
       </div>
     </div>
@@ -18,8 +18,8 @@
   </div>
 </section>
 
-<section id="ofertas" style="padding:24px 0">
-  <h2 class="section-title">Nuestras ofertas</h2>
+<section id="productos" style="padding:24px 0">
+  <h2 class="section-title">Nuestros Productos</h2>
   <div class="grid">
     <% offers.forEach(o => { const img = o.image || '/static/img/background.png'; const webp = img.replace(/\.(png|jpe?g)$/i, '.webp'); %>
       <a class="card offer-card" href="/oferta/<%= o.slug %>">

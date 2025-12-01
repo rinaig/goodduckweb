@@ -9,7 +9,7 @@
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
     <div class="card">
-      <h3>Ofertas</h3>
+      <h3>Nuestros Productos</h3>
       <form method="post" action="/admin/offers" style="display:grid;gap:8px;margin-bottom:10px">
         <input name="title" placeholder="Título" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" required />
         <input name="slug" placeholder="Slug" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" required />
@@ -28,11 +28,11 @@
                 <% } %>
                 <form method="post" action="/admin/offers/<%= o.id %>/image" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center">
                   <input type="file" name="image" />
-                  <button class="btn" type="submit">Actualizar imagen</button>
+                  <button class="btn" style="background:#182332;color:#fff" type="submit">Actualizar imagen</button>
                 </form>
               </div>
             </div>
-            <form method="post" action="/admin/offers/<%= o.id %>/delete"><button class="btn" type="submit">Eliminar</button></form>
+            <form method="post" action="/admin/offers/<%= o.id %>/delete"><button class="btn" style="background:#182332;color:#fff" type="submit">Eliminar</button></form>
             <details style="grid-column:1/-1;margin-top:8px">
               <summary style="cursor:pointer;color:#eaf1f7">Editar oferta</summary>
               <form method="post" action="/admin/offers/<%= o.id %>/edit" style="display:grid;gap:8px;margin-top:8px">
