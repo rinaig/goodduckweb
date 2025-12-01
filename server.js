@@ -10,7 +10,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import sanitizeHtml from 'sanitize-html';
 import session from 'express-session';
-import Database from 'better-sqlite3';
+import { createDbAdapter, ensureSchema } from './db.js';
 import expressLayouts from 'express-ejs-layouts';
 
 dotenv.config();
@@ -44,112 +44,7 @@ try {
   // Último fallback: carpeta pública (no persistente si no hay Disk)
 }
 
-const db = new Database(dbPath);
-
-// Ensure tables
-db.exec(`
-CREATE TABLE IF NOT EXISTS offers (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  slug TEXT UNIQUE NOT NULL,
-  summary TEXT,
-  content TEXT,
-  image TEXT,
-  created_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT
-);
-CREATE TABLE IF NOT EXISTS posts (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  slug TEXT UNIQUE NOT NULL,
-  excerpt TEXT,
-  content TEXT,
-  cover TEXT,
-  created_at TEXT DEFAULT (datetime('now')),
-  updated_at TEXT
-);
-CREATE TABLE IF NOT EXISTS media (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  filename TEXT NOT NULL,
-  url TEXT NOT NULL,
-  created_at TEXT DEFAULT (datetime('now'))
-);
-CREATE TABLE IF NOT EXISTS contacts (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT,
-  email TEXT,
-  message TEXT,
-  created_at TEXT DEFAULT (datetime('now'))
-);
-CREATE TABLE IF NOT EXISTS settings (
-  id INTEGER PRIMARY KEY CHECK (id = 1),
-  phone TEXT,
-  whatsapp TEXT,
-  instagram TEXT,
-  facebook TEXT,
-  twitter TEXT,
-  email TEXT,
-  hero_image TEXT,
-  updated_at TEXT
-);
-CREATE TABLE IF NOT EXISTS admin_users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  username TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
-  updated_at TEXT
-);
-`);
-
-// Migraciones puntuales
-try {
-  const settingsCols = db.prepare("PRAGMA table_info(settings)").all();
-  const hasHero = settingsCols.some(c => c.name === 'hero_image');
-  if (!hasHero) {
-    db.prepare('ALTER TABLE settings ADD COLUMN hero_image TEXT').run();
-    // Set default hero image si falta
-    db.prepare('UPDATE settings SET hero_image=? WHERE id=1').run('/static/img/diseñoapp.png');
-  }
-} catch {}
-
-// Seed admin user if missing
-try {
-  const adminCount = db.prepare('SELECT COUNT(*) as c FROM admin_users').get().c;
-  if (adminCount === 0) {
-    const seedUser = process.env.ADMIN_USER || 'admin';
-    const seedPass = process.env.ADMIN_PASS || 'admin123';
-    const hash = bcrypt.hashSync(seedPass, 10);
-    db.prepare('INSERT INTO admin_users (username, password_hash, updated_at) VALUES (?, ?, ?)')
-      .run(seedUser, hash, new Date().toISOString());
-    console.log('Admin user seeded');
-  }
-} catch (e) {
-  console.warn('No se pudo crear usuario admin:', e.message);
-}
-
-// Ensure column 'image' exists in offers (for older DBs)
-try {
-  const cols = db.prepare("PRAGMA table_info(offers)").all();
-  const hasImage = cols.some(c => c.name === 'image');
-  if (!hasImage) {
-    db.prepare('ALTER TABLE offers ADD COLUMN image TEXT').run();
-  }
-} catch {}
-
-// Seed offers if empty
-const countOffers = db.prepare('SELECT COUNT(*) as c FROM offers').get().c;
-if (countOffers === 0) {
-  const seed = db.prepare('INSERT INTO offers (title, slug, summary, content, image) VALUES (?, ?, ?, ?, ?)');
-  seed.run('Diseño de Páginas Web', 'diseno-web', 'Sitios modernos, rápidos y SEO-friendly.', 'Construimos sitios responsive, optimizados y de alto impacto visual.', '/static/img/diseño web_bajada.png');
-  seed.run('Sistemas para Pymes', 'sistemas-pymes', 'Automatización y gestión eficiente.', 'Diseñamos sistemas a medida para optimizar tus operaciones.', '/static/img/diseñoapp.png');
-  seed.run('Soluciones para Comercios', 'soluciones-comercios', 'Herramientas en Sistemas/Excel.', 'Desarrollos ligeros en software o Excel para pequeños comercios.', '/static/img/diseñografico_2.png');
-}
-
-// Seed settings row if missing
-const settingsRow = db.prepare('SELECT COUNT(*) as c FROM settings').get().c;
-if (settingsRow === 0) {
-  db.prepare('INSERT INTO settings (id, phone, whatsapp, instagram, facebook, twitter, email, hero_image, updated_at) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)')
-    .run('+54 11 0000-0000', 'https://wa.me/541100000000', 'https://instagram.com/', 'https://facebook.com/', 'https://twitter.com/', 'info@goodduck.test', '/static/img/diseñoapp.png', new Date().toISOString());
-}
+let db; // se inicializa en init()
 
 // View engine
 app.set('views', path.join(process.cwd(), 'views'));
@@ -165,15 +60,17 @@ app.use('/static', express.static(path.join(process.cwd(), 'public')));
 // Seguridad básica
 app.use(helmet({ contentSecurityPolicy: false }));
 // Cargar settings en locals (con fallback que crea fila si falta)
-app.use((req, res, next) => {
-  let s = db.prepare('SELECT * FROM settings WHERE id = 1').get();
-  if (!s) {
-    db.prepare('INSERT INTO settings (id, phone, whatsapp, instagram, facebook, twitter, email, hero_image, updated_at) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .run('+54 11 0000-0000', 'https://wa.me/541100000000', 'https://instagram.com/', 'https://facebook.com/', 'https://twitter.com/', 'info@goodduck.test', '/static/img/diseñoapp.png', new Date().toISOString());
-    s = db.prepare('SELECT * FROM settings WHERE id = 1').get();
-  }
-  res.locals.settings = s;
-  next();
+app.use(async (req, res, next) => {
+  try {
+    let s = await db.get('SELECT * FROM settings WHERE id = 1');
+    if (!s) {
+      await db.run('INSERT INTO settings (id, phone, whatsapp, instagram, facebook, twitter, email, hero_image, updated_at) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)',
+        ['+54 11 0000-0000', 'https://wa.me/541100000000', 'https://instagram.com/', 'https://facebook.com/', 'https://twitter.com/', 'info@goodduck.test', '/static/img/diseñoapp.png', new Date().toISOString()]);
+      s = await db.get('SELECT * FROM settings WHERE id = 1');
+    }
+    res.locals.settings = s;
+    next();
+  } catch (e) { next(e); }
 });
 // Sesiones para autenticación básica
 app.use(
@@ -222,11 +119,11 @@ const upload = multer({
 });
 
 // Helpers
-function getOffers() {
-  return db.prepare('SELECT * FROM offers ORDER BY id').all();
+async function getOffers() {
+  return db.all('SELECT * FROM offers ORDER BY id');
 }
-function getRecentPosts(limit = 6) {
-  return db.prepare('SELECT * FROM posts ORDER BY created_at DESC LIMIT ?').all(limit);
+async function getRecentPosts(limit = 6) {
+  return db.all('SELECT * FROM posts ORDER BY created_at DESC LIMIT ?', [limit]);
 }
 
 // Utilidades de validación/sanitización
@@ -248,18 +145,18 @@ const adminLimiter = rateLimit({ windowMs: 15*60*1000, max: 200, standardHeaders
 const formLimiter = rateLimit({ windowMs: 10*60*1000, max: 100 });
 
 // Routes: Public
-app.get('/', (req, res) => {
-  const offers = getOffers();
-  const posts = getRecentPosts();
+app.get('/', async (req, res) => {
+  const offers = await getOffers();
+  const posts = await getRecentPosts();
   res.render('home', { offers, posts });
 });
-app.get('/oferta/:slug', (req, res) => {
-  const offer = db.prepare('SELECT * FROM offers WHERE slug = ?').get(req.params.slug);
+app.get('/oferta/:slug', async (req, res) => {
+  const offer = await db.get('SELECT * FROM offers WHERE slug = ?', [req.params.slug]);
   if (!offer) return res.status(404).render('404');
   res.render('offer', { offer });
 });
-app.get('/blog/:slug', (req, res) => {
-  const post = db.prepare('SELECT * FROM posts WHERE slug = ?').get(req.params.slug);
+app.get('/blog/:slug', async (req, res) => {
+  const post = await db.get('SELECT * FROM posts WHERE slug = ?', [req.params.slug]);
   if (!post) return res.status(404).render('404');
   res.render('post', { post });
 });
@@ -267,7 +164,7 @@ app.post('/contacto', formLimiter, async (req, res) => {
   const name = clamp(req.body.name, 80);
   const emailAddr = clamp(req.body.email, 120);
   const message = clamp(req.body.message, 1000);
-  db.prepare('INSERT INTO contacts (name, email, message) VALUES (?, ?, ?)').run(name, emailAddr, message);
+  await db.run('INSERT INTO contacts (name, email, message) VALUES (?, ?, ?)', [name, emailAddr, message]);
   if (transporter) {
     try {
       const to = process.env.MAIL_TO || (res.locals.settings && res.locals.settings.email) || process.env.SMTP_USER;
@@ -293,9 +190,9 @@ app.get('/admin/login', (req, res) => {
   res.render('admin/login', { title: 'Acceso Admin', error: null });
 });
 
-app.post('/admin/login', (req, res) => {
+app.post('/admin/login', async (req, res) => {
   const { username, password } = req.body;
-  const row = db.prepare('SELECT * FROM admin_users WHERE username = ?').get(username);
+  const row = await db.get('SELECT * FROM admin_users WHERE username = ?', [username]);
   if (row && bcrypt.compareSync(password, row.password_hash)) {
     req.session.isAdmin = true;
     req.session.adminUser = row.username;
@@ -309,19 +206,19 @@ app.post('/admin/logout', (req, res) => {
 });
 
 app.use('/admin', adminLimiter);
-app.get('/admin', requireAdmin, (req, res) => {
-  const offers = getOffers();
-  const posts = db.prepare('SELECT * FROM posts ORDER BY created_at DESC').all();
+app.get('/admin', requireAdmin, async (req, res) => {
+  const offers = await getOffers();
+  const posts = await db.all('SELECT * FROM posts ORDER BY created_at DESC');
   res.render('admin/index', { offers, posts });
 });
 app.get('/admin/account', requireAdmin, (req, res) => {
   const user = req.session.adminUser;
   res.render('admin/account', { title: 'Cuenta', user, error: null, success: null });
 });
-app.post('/admin/account/password', requireAdmin, (req, res) => {
+app.post('/admin/account/password', requireAdmin, async (req, res) => {
   const { current_password, new_password, confirm_password } = req.body;
   const user = req.session.adminUser;
-  const row = db.prepare('SELECT * FROM admin_users WHERE username=?').get(user);
+  const row = await db.get('SELECT * FROM admin_users WHERE username=?', [user]);
   if (!row) return res.render('admin/account', { title: 'Cuenta', user, error: 'Usuario no encontrado', success: null });
   if (!bcrypt.compareSync(current_password, row.password_hash)) {
     return res.render('admin/account', { title: 'Cuenta', user, error: 'Contraseña actual incorrecta', success: null });
@@ -333,86 +230,85 @@ app.post('/admin/account/password', requireAdmin, (req, res) => {
     return res.render('admin/account', { title: 'Cuenta', user, error: 'La nueva contraseña debe tener al menos 6 caracteres', success: null });
   }
   const hash = bcrypt.hashSync(new_password, 10);
-  db.prepare('UPDATE admin_users SET password_hash=?, updated_at=? WHERE id=?')
-    .run(hash, new Date().toISOString(), row.id);
+  await db.run('UPDATE admin_users SET password_hash=?, updated_at=? WHERE id=?', [hash, new Date().toISOString(), row.id]);
   return res.render('admin/account', { title: 'Cuenta', user, error: null, success: 'Contraseña actualizada correctamente' });
 });
 // Settings admin
-app.get('/admin/settings', requireAdmin, (req, res) => {
-  const settings = db.prepare('SELECT * FROM settings WHERE id = 1').get();
+app.get('/admin/settings', requireAdmin, async (req, res) => {
+  const settings = await db.get('SELECT * FROM settings WHERE id = 1');
   res.render('admin/settings', { title: 'Configuración', settings });
 });
-app.post('/admin/settings', requireAdmin, (req, res) => {
+app.post('/admin/settings', requireAdmin, async (req, res) => {
   const { phone, whatsapp, instagram, facebook, twitter, email, hero_image } = req.body;
-  db.prepare('UPDATE settings SET phone=?, whatsapp=?, instagram=?, facebook=?, twitter=?, email=?, hero_image=?, updated_at=? WHERE id=1')
-    .run(phone, whatsapp, instagram, facebook, twitter, email, hero_image, new Date().toISOString());
+  await db.run('UPDATE settings SET phone=?, whatsapp=?, instagram=?, facebook=?, twitter=?, email=?, hero_image=?, updated_at=? WHERE id=1',
+    [phone, whatsapp, instagram, facebook, twitter, email, hero_image, new Date().toISOString()]);
   res.redirect('/admin/settings');
 });
 // Offers CRUD
-app.post('/admin/offers', requireAdmin, (req, res) => {
+app.post('/admin/offers', requireAdmin, async (req, res) => {
   const title = clamp(req.body.title, 100);
   const slug = cleanSlug(req.body.slug);
   const summary = clamp(req.body.summary, 240);
   const content = cleanHTML(req.body.content);
-  db.prepare('INSERT INTO offers (title, slug, summary, content) VALUES (?, ?, ?, ?)').run(title, slug, summary, content);
+  await db.run('INSERT INTO offers (title, slug, summary, content) VALUES (?, ?, ?, ?)', [title, slug, summary, content]);
   res.redirect('/admin');
 });
-app.post('/admin/offers/:id/edit', requireAdmin, (req, res) => {
+app.post('/admin/offers/:id/edit', requireAdmin, async (req, res) => {
   const title = clamp(req.body.title, 100);
   const slug = cleanSlug(req.body.slug);
   const summary = clamp(req.body.summary, 240);
   const content = cleanHTML(req.body.content);
-  db.prepare('UPDATE offers SET title=?, slug=?, summary=?, content=?, updated_at=? WHERE id=?')
-    .run(title, slug, summary, content, new Date().toISOString(), req.params.id);
+  await db.run('UPDATE offers SET title=?, slug=?, summary=?, content=?, updated_at=? WHERE id=?',
+    [title, slug, summary, content, new Date().toISOString(), req.params.id]);
   res.redirect('/admin');
 });
-app.post('/admin/offers/:id/delete', requireAdmin, (req, res) => {
-  db.prepare('DELETE FROM offers WHERE id = ?').run(req.params.id);
+app.post('/admin/offers/:id/delete', requireAdmin, async (req, res) => {
+  await db.run('DELETE FROM offers WHERE id = ?', [req.params.id]);
   res.redirect('/admin');
 });
 // Posts CRUD
-app.post('/admin/posts', requireAdmin, upload.single('cover'), (req, res) => {
+app.post('/admin/posts', requireAdmin, upload.single('cover'), async (req, res) => {
   const title = clamp(req.body.title, 120);
   const slug = cleanSlug(req.body.slug);
   const excerpt = clamp(req.body.excerpt, 280);
   const content = cleanHTML(req.body.content);
   const cover = req.file ? `/static/uploads/${req.file.filename}` : null;
-  db.prepare('INSERT INTO posts (title, slug, excerpt, content, cover) VALUES (?, ?, ?, ?, ?)').run(title, slug, excerpt, content, cover);
+  await db.run('INSERT INTO posts (title, slug, excerpt, content, cover) VALUES (?, ?, ?, ?, ?)', [title, slug, excerpt, content, cover]);
   res.redirect('/admin');
 });
-app.post('/admin/posts/:id/edit', requireAdmin, (req, res) => {
+app.post('/admin/posts/:id/edit', requireAdmin, async (req, res) => {
   const title = clamp(req.body.title, 120);
   const slug = cleanSlug(req.body.slug);
   const excerpt = clamp(req.body.excerpt, 280);
   const content = cleanHTML(req.body.content);
-  db.prepare('UPDATE posts SET title=?, slug=?, excerpt=?, content=?, updated_at=? WHERE id=?')
-    .run(title, slug, excerpt, content, new Date().toISOString(), req.params.id);
+  await db.run('UPDATE posts SET title=?, slug=?, excerpt=?, content=?, updated_at=? WHERE id=?',
+    [title, slug, excerpt, content, new Date().toISOString(), req.params.id]);
   res.redirect('/admin');
 });
-app.post('/admin/posts/:id/delete', requireAdmin, (req, res) => {
-  db.prepare('DELETE FROM posts WHERE id = ?').run(req.params.id);
+app.post('/admin/posts/:id/delete', requireAdmin, async (req, res) => {
+  await db.run('DELETE FROM posts WHERE id = ?', [req.params.id]);
   res.redirect('/admin');
 });
 
 // Update offer image
-app.post('/admin/offers/:id/image', requireAdmin, upload.single('image'), (req, res) => {
+app.post('/admin/offers/:id/image', requireAdmin, upload.single('image'), async (req, res) => {
   if (req.file) {
     const url = `/static/uploads/${req.file.filename}`;
-    db.prepare('UPDATE offers SET image=?, updated_at=? WHERE id=?').run(url, new Date().toISOString(), req.params.id);
+    await db.run('UPDATE offers SET image=?, updated_at=? WHERE id=?', [url, new Date().toISOString(), req.params.id]);
   }
   res.redirect('/admin');
 });
 
 // Media manager
-app.get('/admin/media', requireAdmin, (req, res) => {
-  const media = db.prepare('SELECT * FROM media ORDER BY created_at DESC').all();
+app.get('/admin/media', requireAdmin, async (req, res) => {
+  const media = await db.all('SELECT * FROM media ORDER BY created_at DESC');
   res.render('admin/media', { title: 'Media', media });
 });
-app.post('/admin/media', requireAdmin, upload.single('file'), (req, res) => {
+app.post('/admin/media', requireAdmin, upload.single('file'), async (req, res) => {
   const f = req.file;
   if (f) {
     const url = `/static/uploads/${f.filename}`;
-    db.prepare('INSERT INTO media (filename, url, created_at) VALUES (?, ?, ?)').run(f.originalname, url, new Date().toISOString());
+    await db.run('INSERT INTO media (filename, url, created_at) VALUES (?, ?, ?)', [f.originalname, url, new Date().toISOString()]);
   }
   res.redirect('/admin/media');
 });
@@ -420,5 +316,65 @@ app.post('/admin/media', requireAdmin, upload.single('file'), (req, res) => {
 // 404
 app.use((req, res) => res.status(404).render('404'));
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`GOOD DUCK web running on http://localhost:${port}`));
+async function init() {
+  // Inicializar adaptador DB
+  db = createDbAdapter({ provider: process.env.DB_PROVIDER || 'sqlite', sqlitePath: dbPath });
+  await ensureSchema(db);
+
+  // Migraciones puntuales solo para SQLite
+  if (db.provider === 'sqlite' && db._raw) {
+    try {
+      const settingsCols = db._raw.prepare("PRAGMA table_info(settings)").all();
+      const hasHero = settingsCols.some(c => c.name === 'hero_image');
+      if (!hasHero) {
+        db._raw.prepare('ALTER TABLE settings ADD COLUMN hero_image TEXT').run();
+        db._raw.prepare('UPDATE settings SET hero_image=? WHERE id=1').run('/static/img/diseñoapp.png');
+      }
+    } catch {}
+    try {
+      const cols = db._raw.prepare("PRAGMA table_info(offers)").all();
+      const hasImage = cols.some(c => c.name === 'image');
+      if (!hasImage) {
+        db._raw.prepare('ALTER TABLE offers ADD COLUMN image TEXT').run();
+      }
+    } catch {}
+  }
+
+  // Seed admin user y settings/ofertas
+  try {
+    const adminRow = await db.get('SELECT COUNT(*) as c FROM admin_users');
+    const adminCount = parseInt(adminRow?.c || adminRow?.count || 0, 10);
+    if (!adminCount) {
+      const seedUser = process.env.ADMIN_USER || 'admin';
+      const seedPass = process.env.ADMIN_PASS || 'admin123';
+      const hash = bcrypt.hashSync(seedPass, 10);
+      await db.run('INSERT INTO admin_users (username, password_hash, updated_at) VALUES (?, ?, ?)', [seedUser, hash, new Date().toISOString()]);
+      console.log('Admin user seeded');
+    }
+  } catch (e) {
+    console.warn('No se pudo crear usuario admin:', e.message);
+  }
+
+  const countOffersRow = await db.get('SELECT COUNT(*) as c FROM offers');
+  const countOffers = parseInt(countOffersRow?.c || countOffersRow?.count || 0, 10);
+  if (!countOffers) {
+    await db.run('INSERT INTO offers (title, slug, summary, content, image) VALUES (?, ?, ?, ?, ?)', ['Diseño de Páginas Web', 'diseno-web', 'Sitios modernos, rápidos y SEO-friendly.', 'Construimos sitios responsive, optimizados y de alto impacto visual.', '/static/img/diseño web_bajada.png']);
+    await db.run('INSERT INTO offers (title, slug, summary, content, image) VALUES (?, ?, ?, ?, ?)', ['Sistemas para Pymes', 'sistemas-pymes', 'Automatización y gestión eficiente.', 'Diseñamos sistemas a medida para optimizar tus operaciones.', '/static/img/diseñoapp.png']);
+    await db.run('INSERT INTO offers (title, slug, summary, content, image) VALUES (?, ?, ?, ?, ?)', ['Soluciones para Comercios', 'soluciones-comercios', 'Herramientas en Sistemas/Excel.', 'Desarrollos ligeros en software o Excel para pequeños comercios.', '/static/img/diseñografico_2.png']);
+  }
+
+  const settingsRow = await db.get('SELECT COUNT(*) as c FROM settings');
+  const settingsCount = parseInt(settingsRow?.c || settingsRow?.count || 0, 10);
+  if (!settingsCount) {
+    await db.run('INSERT INTO settings (id, phone, whatsapp, instagram, facebook, twitter, email, hero_image, updated_at) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)',
+      ['+54 11 0000-0000', 'https://wa.me/541100000000', 'https://instagram.com/', 'https://facebook.com/', 'https://twitter.com/', 'info@goodduck.test', '/static/img/diseñoapp.png', new Date().toISOString()]);
+  }
+
+  const port = process.env.PORT || 3000;
+  app.listen(port, () => console.log(`GOOD DUCK web running on http://localhost:${port}`));
+}
+
+init().catch(err => {
+  console.error('Fallo inicializando la app:', err);
+  process.exit(1);
+});
