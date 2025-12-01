@@ -1,0 +1,68 @@
+<section class="hero hero-bg">
+  <div class="wrap" style="display:grid;grid-template-columns:1.1fr 0.9fr;gap:40px;align-items:center">
+    <div>
+      <h1 class="hero-title">Impulsa tu negocio con soluciones digitales</h1>
+      <p class="hero-sub">Sitios web, sistemas y herramientas a medida para Pymes y comercios. Rendimiento, diseño y resultados.</p>
+      <div style="display:flex;gap:10px;margin-top:6px">
+        <a class="btn primary" href="#ofertas">Ver Ofertas</a>
+        <a class="btn" href="#contacto">Contáctanos</a>
+      </div>
+    </div>
+    <div class="hero-art">
+      <picture style="display:block">
+        <source srcset="/static/img/diseñoapp_BAJADA.webp" type="image/webp" />
+        <img src="/static/img/diseñoapp_BAJADA.png" alt="Ilustración app" class="hero-image" />
+      </picture>
+    </div>
+  </div>
+</section>
+
+<section id="ofertas" style="padding:24px 0">
+  <h2 class="section-title">Nuestras ofertas</h2>
+  <div class="grid">
+    <% offers.forEach(o => { const img = o.image || '/static/img/background.png'; const webp = img.replace(/\.(png|jpe?g)$/i, '.webp'); %>
+      <a class="card offer-card" href="/oferta/<%= o.slug %>">
+        <div class="offer-thumb">
+          <picture>
+            <source srcset="<%= webp %>" type="image/webp" />
+            <img src="<%= img %>" alt="Imagen <%= o.title %>" />
+          </picture>
+        </div>
+        <h3><%= o.title %></h3>
+        <p><%= o.summary %></p>
+      </a>
+    <% }) %>
+  </div>
+</section>
+
+<section style="padding:10px 0">
+  <h2 class="section-title">Blog y novedades</h2>
+  <div class="grid">
+    <% posts.forEach(p => { %>
+      <a class="card post-card" href="/blog/<%= p.slug %>">
+        <h3><%= p.title %></h3>
+        <p><%= p.excerpt || '' %></p>
+      </a>
+    <% }) %>
+  </div>
+</section>
+
+<section id="contacto" style="padding:30px 0">
+  <div class="contact-grid">
+    <div class="card">
+      <h3>Contacto</h3>
+      <form method="post" action="/contacto" style="display:grid;gap:10px">
+        <input name="name" placeholder="Nombre" class="btn" style="background:#0b0f14" />
+        <input name="email" placeholder="Email" class="btn" style="background:#0b0f14" />
+        <textarea name="message" placeholder="Mensaje" class="btn" style="background:#0b0f14;height:120px"></textarea>
+        <button class="btn primary" type="submit">Enviar</button>
+      </form>
+    </div>
+    <div class="contact-art">
+      <picture>
+        <source srcset="/static/img/office.webp" type="image/webp" />
+        <img src="/static/img/office.png" alt="Oficina" />
+      </picture>
+    </div>
+  </div>
+</section>

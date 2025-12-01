@@ -1,0 +1,16 @@
+<section style="padding:20px 0">
+  <h1 style="color:#fff;margin:0 0 16px">Media</h1>
+  <form method="post" action="/admin/media" enctype="multipart/form-data" class="card" style="display:flex;gap:10px;align-items:center">
+    <input type="file" name="file" />
+    <button class="btn primary" type="submit">Subir archivo</button>
+  </form>
+  <div style="margin-top:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+    <% media.forEach(m=>{ %>
+      <div class="card" style="display:flex;gap:10px;align-items:center">
+        <img src="<%= m.url %>" alt="media" style="height:56px;border-radius:8px;border:1px solid #1b222c"/>
+        <div style="font-size:12px;word-break:break-all;color:#9fb0c4"><%= m.url %></div>
+      </div>
+    <% }) %>
+  </div>
+  <div style="margin-top:16px"><a class="btn" href="/admin">Volver</a></div>
+</section>

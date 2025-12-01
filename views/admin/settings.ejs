@@ -1,0 +1,33 @@
+<section style="padding:20px 0">
+  <h1 style="color:#fff;margin:0 0 20px">Configuración del Sitio</h1>
+  <form method="post" action="/admin/settings" style="display:grid;gap:14px;max-width:600px">
+    <div>
+      <label style="display:block;margin-bottom:4px">Teléfono</label>
+      <input class="btn" style="background:#0b0f14;width:100%" name="phone" value="<%= settings.phone || '' %>" />
+    </div>
+    <div>
+      <label style="display:block;margin-bottom:4px">WhatsApp (URL completa)</label>
+      <input class="btn" style="background:#0b0f14;width:100%" name="whatsapp" value="<%= settings.whatsapp || '' %>" />
+    </div>
+    <div>
+      <label style="display:block;margin-bottom:4px">Instagram (URL)</label>
+      <input class="btn" style="background:#0b0f14;width:100%" name="instagram" value="<%= settings.instagram || '' %>" />
+    </div>
+    <div>
+      <label style="display:block;margin-bottom:4px">Facebook (URL)</label>
+      <input class="btn" style="background:#0b0f14;width:100%" name="facebook" value="<%= settings.facebook || '' %>" />
+    </div>
+    <div>
+      <label style="display:block;margin-bottom:4px">Twitter/X (URL)</label>
+      <input class="btn" style="background:#0b0f14;width:100%" name="twitter" value="<%= settings.twitter || '' %>" />
+    </div>
+    <div>
+      <label style="display:block;margin-bottom:4px">Email</label>
+      <input class="btn" style="background:#0b0f14;width:100%" name="email" value="<%= settings.email || '' %>" />
+    </div>
+    <button type="submit" class="btn primary">Guardar cambios</button>
+  </form>
+  <div style="margin-top:24px">
+    <a href="/admin" class="btn">Volver al panel</a>
+  </div>
+</section>

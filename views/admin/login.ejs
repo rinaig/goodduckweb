@@ -1,0 +1,17 @@
+<div class="container" style="max-width:420px; margin:40px auto;">
+  <h2>Acceso Admin</h2>
+  <% if (error) { %>
+    <div style="color:#b00020; margin:10px 0;"><%= error %></div>
+  <% } %>
+  <form method="post" action="/admin/login" style="display:flex; flex-direction:column; gap:12px;">
+    <div>
+      <label>Usuario</label>
+      <input type="text" name="username" required />
+    </div>
+    <div>
+      <label>Contraseña</label>
+      <input type="password" name="password" required />
+    </div>
+    <button type="submit">Entrar</button>
+  </form>
+</div>

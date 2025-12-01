@@ -1,0 +1,16 @@
+<article style="padding:20px 0">
+  <h1 style="color:#fff"><%= offer.title %></h1>
+  <% const img = offer.image || '/static/img/background.png'; const webp = img.replace(/\.(png|jpe?g)$/i, '.webp'); %>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+    <div>
+      <p style="color:#9fb0c4;font-size:18px;margin-top:4px"><%= offer.summary %></p>
+      <div class="card" style="margin-top:14px"><p><%= offer.content %></p></div>
+    </div>
+    <div>
+      <picture>
+        <source srcset="<%= webp %>" type="image/webp" />
+        <img src="<%= img %>" alt="Imagen <%= offer.title %>" style="width:100%;border-radius:16px;border:1px solid #1b222c" />
+      </picture>
+    </div>
+  </div>
+</article>

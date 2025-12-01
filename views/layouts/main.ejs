@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GOOD DUCK</title>
+  <% if (isProd) { %>
+    <link rel="stylesheet" href="/static/css/custom.min.css" />
+  <% } else { %>
+    <link rel="stylesheet" href="/static/css/custom.css" />
+  <% } %>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --brand:#00C2FF; --dark:#0A0A0A; --light:#ffffff; --muted:#5f6a7a; }
+    body{font-family:Inter,system-ui,Arial; background:#0b0f14; color:#dfe6ee; margin:0}
+    a{color:var(--brand); text-decoration:none}
+    header{position:sticky;top:0;background:#0b0f14cc;backdrop-filter:blur(8px);border-bottom:1px solid #1b222c}
+    .wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 0}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;color:#fff}
+    .brand img{height:32px}
+    .cta{display:flex;gap:10px}
+    .btn{padding:10px 14px;border-radius:10px;border:1px solid #1b222c;color:#eaf1f7}
+    .btn.primary{background:linear-gradient(135deg,#00C2FF,#6C5CE7);border:0;color:#fff}
+    .hero{padding:60px 0 30px;background:radial-gradient(1200px 400px at 20% 0%, #0e141c, #0b0f14);}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .card{background:#0e141c;border:1px solid #1b222c;border-radius:14px;padding:18px}
+    .card h3{margin:0 0 6px;color:#fff}
+    .card p{margin:0;color:#9fb0c4}
+    .footer{border-top:1px solid #1b222c;margin-top:40px;padding:30px 0;color:#9fb0c4}
+    @media(max-width:860px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <div class="brand"><img src="/static/img/good duck logo_BLANCO.png" alt="Good Duck"/> GOOD DUCK</div>
+      <nav class="cta">
+        <a class="btn" href="#ofertas">Ofertas</a>
+        <a class="btn" href="#contacto">Contacto</a>
+        <a class="btn primary" href="/admin">Administrar</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <%- body %>
+    <section style="margin-top:30px" class="social-bar">
+      <h2 style="color:#fff;font-size:22px;margin:0 0 12px">Conecta con nosotros</h2>
+      <div class="social-icons" style="display:flex;flex-wrap:wrap;gap:14px;align-items:center">
+        <% if (settings.phone) { %><div style="color:#9fb0c4">Tel: <strong style="color:#fff"><%= settings.phone %></strong></div><% } %>
+        <% if (settings.email) { %><div style="color:#9fb0c4">Email: <strong style="color:#fff"><%= settings.email %></strong></div><% } %>
+        <% if (settings.instagram) { %><a href="<%= settings.instagram %>" target="_blank"><img src="/static/img/instagram_f_icon-icons.com_65485.png" alt="Instagram" style="height:32px"/></a><% } %>
+        <% if (settings.facebook) { %><a href="<%= settings.facebook %>" target="_blank"><img src="/static/img/fb_icon-icons.com_65434.png" alt="Facebook" style="height:32px"/></a><% } %>
+        <% if (settings.twitter) { %><a href="<%= settings.twitter %>" target="_blank"><img src="/static/img/Twitter_Rounded_icon-icons.com_61577.png" alt="Twitter" style="height:32px"/></a><% } %>
+        <% if (settings.whatsapp) { %><a href="<%= settings.whatsapp %>" target="_blank"><img src="/static/img/whatappsinfondo.png" alt="WhatsApp" style="height:32px"/></a><% } %>
+      </div>
+    </section>
+  </main>
+  <footer class="footer wrap">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <div>© <%= new Date().getFullYear() %> GOOD DUCK. Todos los derechos reservados.</div>
+      <div class="social-icons" style="display:flex;gap:10px">
+        <% if (settings.instagram) { %><a href="<%= settings.instagram %>" target="_blank"><img src="/static/img/instagram_f_icon-icons.com_65485.png" alt="Instagram" style="height:24px"/></a><% } %>
+        <% if (settings.facebook) { %><a href="<%= settings.facebook %>" target="_blank"><img src="/static/img/fb_icon-icons.com_65434.png" alt="Facebook" style="height:24px"/></a><% } %>
+        <% if (settings.twitter) { %><a href="<%= settings.twitter %>" target="_blank"><img src="/static/img/Twitter_Rounded_icon-icons.com_61577.png" alt="Twitter" style="height:24px"/></a><% } %>
+        <% if (settings.whatsapp) { %><a href="<%= settings.whatsapp %>" target="_blank"><img src="/static/img/whatappsinfondo.png" alt="WhatsApp" style="height:24px"/></a><% } %>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

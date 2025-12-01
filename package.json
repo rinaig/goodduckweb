@@ -1,0 +1,32 @@
+{
+  "name": "good-duck-web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20 <21" },
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build:assets": "node ./scripts/optimize-images.js",
+    "build:css": "npx cleancss -o public/css/custom.min.css public/css/custom.css",
+    "build": "npm run build:assets && npm run build:css",
+    "postinstall": "npm run build || exit 0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.5",
+    "body-parser": "^1.20.2",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "express-ejs-layouts": "^2.5.1",
+    "express-session": "^1.17.3",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "sanitize-html": "^2.13.0",
+    "multer": "^2.0.0"
+  },
+  "devDependencies": {
+    "clean-css-cli": "^5.6.2",
+    "sharp": "^0.33.2"
+  }
+}

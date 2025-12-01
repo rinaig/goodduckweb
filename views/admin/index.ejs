@@ -1,0 +1,60 @@
+<section style="padding:20px 0">
+  <h1 style="color:#fff">Administración</h1>
+  <form method="post" action="/admin/logout" style="margin:10px 0;">
+    <button class="btn" type="submit">Cerrar sesión</button>
+  </form>
+  <div style="margin:0 0 20px;display:flex;gap:10px;flex-wrap:wrap">
+    <a href="/admin/settings" class="btn">Configuración</a>
+    <a href="/admin/media" class="btn">Media</a>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div class="card">
+      <h3>Ofertas</h3>
+      <form method="post" action="/admin/offers" style="display:grid;gap:8px;margin-bottom:10px">
+        <input name="title" placeholder="Título" class="btn" style="background:#0b0f14" required />
+        <input name="slug" placeholder="Slug" class="btn" style="background:#0b0f14" required />
+        <input name="summary" placeholder="Resumen" class="btn" style="background:#0b0f14" />
+        <textarea name="content" placeholder="Contenido" class="btn" style="background:#0b0f14"></textarea>
+        <button class="btn primary" type="submit">Crear</button>
+      </form>
+      <ul style="display:grid;gap:10px">
+        <% offers.forEach(o=>{ %>
+          <li class="card" style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;color:#9fb0c4">
+            <div>
+              <div><strong style="color:#fff"><%= o.title %></strong> — <%= o.slug %></div>
+              <div style="margin-top:6px;display:flex;gap:10px;align-items:center">
+                <% if (o.image) { %>
+                  <img src="<%= o.image %>" alt="img" style="height:48px;border-radius:8px;border:1px solid #1b222c"/>
+                <% } %>
+                <form method="post" action="/admin/offers/<%= o.id %>/image" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center">
+                  <input type="file" name="image" />
+                  <button class="btn" type="submit">Actualizar imagen</button>
+                </form>
+              </div>
+            </div>
+            <form method="post" action="/admin/offers/<%= o.id %>/delete"><button class="btn" type="submit">Eliminar</button></form>
+          </li>
+        <% }) %>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Posts</h3>
+      <form method="post" action="/admin/posts" enctype="multipart/form-data" style="display:grid;gap:8px;margin-bottom:10px">
+        <input name="title" placeholder="Título" class="btn" style="background:#0b0f14" required />
+        <input name="slug" placeholder="Slug" class="btn" style="background:#0b0f14" required />
+        <input name="excerpt" placeholder="Extracto" class="btn" style="background:#0b0f14" />
+        <textarea name="content" placeholder="Contenido" class="btn" style="background:#0b0f14"></textarea>
+        <input type="file" name="cover" />
+        <button class="btn primary" type="submit">Publicar</button>
+      </form>
+      <ul>
+        <% posts.forEach(p=>{ %>
+          <li style="margin:6px 0;display:flex;justify-content:space-between;align-items:center;color:#9fb0c4">
+            <span><strong style="color:#fff"><%= p.title %></strong> — <%= p.slug %></span>
+            <form method="post" action="/admin/posts/<%= p.id %>/delete"><button class="btn" type="submit">Eliminar</button></form>
+          </li>
+        <% }) %>
+      </ul>
+    </div>
+  </div>
+</section>

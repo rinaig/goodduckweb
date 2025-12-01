@@ -1,0 +1,21 @@
+<article style="padding:20px 0">
+  <h1 style="color:#fff"><%= post.title %></h1>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start;">
+    <div>
+      <div class="card" style="margin-top:4px"><p><%= post.content %></p></div>
+    </div>
+    <div>
+      <% if (post.cover) { const webp = post.cover.replace(/\.png$/,' .webp').replace(/\.jpg$/,' .webp').replace(/\.jpeg$/,' .webp'); %>
+        <picture>
+          <source srcset="<%= webp %>" type="image/webp" />
+          <img src="<%= post.cover %>" alt="Cover" style="width:100%;border-radius:16px;border:1px solid #1b222c" />
+        </picture>
+      <% } else { %>
+        <picture>
+          <source srcset="/static/img/back3.webp" type="image/webp" />
+          <img src="/static/img/back3.png" alt="Decorativo" style="width:100%;border-radius:16px;border:1px solid #1b222c" />
+        </picture>
+      <% } %>
+    </div>
+  </div>
+</article>
