@@ -44,6 +44,21 @@ services:
         sync: false
       - key: APP_BASE_URL
         value: https://goodduckweb.onrender.com
+      # S3/R2 opcional
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_REGION
+        sync: false
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_ACCESS_KEY_ID
+        sync: false
+      - key: S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: S3_PUBLIC_BASE_URL
+        sync: false
+      - key: S3_FORCE_PATH_STYLE
+        sync: false
     # disk:               # Si tu plan permite Disk, descomenta y ajusta
     #   name: data
     #   mountPath: /data

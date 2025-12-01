@@ -11,6 +11,7 @@ import rateLimit from 'express-rate-limit';
 import sanitizeHtml from 'sanitize-html';
 import session from 'express-session';
 import crypto from 'crypto';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { createDbAdapter, ensureSchema } from './db.js';
 import expressLayouts from 'express-ejs-layouts';
 
@@ -108,16 +109,71 @@ try {
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
+// S3/R2 opcional
+const s3Config = {
+  bucket: process.env.S3_BUCKET,
+  region: process.env.S3_REGION,
+  endpoint: process.env.S3_ENDPOINT,
+  accessKeyId: process.env.S3_ACCESS_KEY_ID,
+  secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+  publicBaseUrl: process.env.S3_PUBLIC_BASE_URL,
+  forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
+};
+const s3Enabled = Boolean(s3Config.bucket && (s3Config.endpoint || s3Config.region) && s3Config.accessKeyId && s3Config.secretAccessKey);
+let s3 = null;
+if (s3Enabled) {
+  s3 = new S3Client({
+    region: s3Config.region || 'auto',
+    endpoint: s3Config.endpoint || undefined,
+    forcePathStyle: s3Config.forcePathStyle || false,
+    credentials: { accessKeyId: s3Config.accessKeyId, secretAccessKey: s3Config.secretAccessKey },
+  });
+}
+
+function extFromMime(mime) {
+  if (mime === 'image/png') return '.png';
+  if (mime === 'image/jpeg' || mime === 'image/jpg') return '.jpg';
+  if (mime === 'image/webp') return '.webp';
+  return '';
+}
+function buildPublicUrl(key) {
+  if (s3Config.publicBaseUrl) {
+    return `${s3Config.publicBaseUrl.replace(/\/$/, '')}/${key}`;
+  }
+  if (s3Config.endpoint) {
+    if (s3Config.forcePathStyle) {
+      return `${s3Config.endpoint.replace(/\/$/, '')}/${s3Config.bucket}/${key}`;
+    }
+    const host = s3Config.endpoint.replace(/^https?:\/\//, '');
+    return `https://${s3Config.bucket}.${host.replace(/\/$/, '')}/${key}`;
+  }
+  return `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${key}`;
+}
+async function uploadToObjectStore(file) {
+  const key = `uploads/${Date.now()}-${Math.random().toString(16).slice(2)}${extFromMime(file.mimetype)}`;
+  await s3.send(new PutObjectCommand({ Bucket: s3Config.bucket, Key: key, Body: file.buffer, ContentType: file.mimetype, ACL: 'public-read' }));
+  return buildPublicUrl(key);
+}
+
 // Uploads
-// Subidas guardadas en uploadsDir para servir por /static/uploads
-const upload = multer({
-  dest: uploadsDir,
-  limits: { fileSize: 3 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const ok = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(file.mimetype);
-    cb(ok ? null : new Error('Tipo de archivo no permitido'), ok);
-  },
-});
+// Si hay S3, usar memoria; si no, disco local
+const upload = s3Enabled
+  ? multer({
+      storage: multer.memoryStorage(),
+      limits: { fileSize: 3 * 1024 * 1024 },
+      fileFilter: (req, file, cb) => {
+        const ok = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(file.mimetype);
+        cb(ok ? null : new Error('Tipo de archivo no permitido'), ok);
+      },
+    })
+  : multer({
+      dest: uploadsDir,
+      limits: { fileSize: 3 * 1024 * 1024 },
+      fileFilter: (req, file, cb) => {
+        const ok = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(file.mimetype);
+        cb(ok ? null : new Error('Tipo de archivo no permitido'), ok);
+      },
+    });
 
 // Helpers
 async function getOffers() {
@@ -324,7 +380,14 @@ app.post('/admin/posts', requireAdmin, upload.single('cover'), async (req, res) 
   const slug = cleanSlug(req.body.slug);
   const excerpt = clamp(req.body.excerpt, 280);
   const content = cleanHTML(req.body.content);
-  const cover = req.file ? `/static/uploads/${req.file.filename}` : null;
+  let cover = null;
+  if (req.file) {
+    if (s3Enabled) {
+      try { cover = await uploadToObjectStore(req.file); } catch { cover = null; }
+    } else {
+      cover = `/static/uploads/${req.file.filename}`;
+    }
+  }
   await db.run('INSERT INTO posts (title, slug, excerpt, content, cover) VALUES (?, ?, ?, ?, ?)', [title, slug, excerpt, content, cover]);
   res.redirect('/admin');
 });
@@ -345,7 +408,12 @@ app.post('/admin/posts/:id/delete', requireAdmin, async (req, res) => {
 // Update offer image
 app.post('/admin/offers/:id/image', requireAdmin, upload.single('image'), async (req, res) => {
   if (req.file) {
-    const url = `/static/uploads/${req.file.filename}`;
+    let url;
+    if (s3Enabled) {
+      try { url = await uploadToObjectStore(req.file); } catch { url = null; }
+    } else {
+      url = `/static/uploads/${req.file.filename}`;
+    }
     await db.run('UPDATE offers SET image=?, updated_at=? WHERE id=?', [url, new Date().toISOString(), req.params.id]);
   }
   res.redirect('/admin');
@@ -359,8 +427,15 @@ app.get('/admin/media', requireAdmin, async (req, res) => {
 app.post('/admin/media', requireAdmin, upload.single('file'), async (req, res) => {
   const f = req.file;
   if (f) {
-    const url = `/static/uploads/${f.filename}`;
-    await db.run('INSERT INTO media (filename, url, created_at) VALUES (?, ?, ?)', [f.originalname, url, new Date().toISOString()]);
+    let url;
+    if (s3Enabled) {
+      try { url = await uploadToObjectStore(f); } catch { url = null; }
+    } else {
+      url = `/static/uploads/${f.filename}`;
+    }
+    if (url) {
+      await db.run('INSERT INTO media (filename, url, created_at) VALUES (?, ?, ?)', [f.originalname, url, new Date().toISOString()]);
+    }
   }
   res.redirect('/admin/media');
 });
