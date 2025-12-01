@@ -18,15 +18,29 @@ app.locals.isProd = process.env.NODE_ENV === 'production';
 // Si se despliega detrás de proxy (Render/Heroku/nginx)
 app.set('trust proxy', 1);
 
-// Directorio de datos (para persistencia en Render si se monta un Disk)
-const dataDir = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : process.cwd();
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+// Directorio de datos (persistencia si Disk disponible). Fallback si EACCES.
+const requestedDataDir = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(process.cwd(), 'data');
+let dataDir = requestedDataDir;
+try {
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+} catch (e) {
+  console.warn(`No se pudo usar DATA_DIR '${requestedDataDir}' (${e.code || e.message}), usando fallback local.`);
+  dataDir = path.join(process.cwd(), 'data_fallback');
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
 }
 const dbPath = path.join(dataDir, 'content.db');
 const uploadsDir = path.join(dataDir, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+try {
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+} catch (e) {
+  console.warn('No se pudo crear uploads en dataDir, usando ./public/uploads como último recurso');
+  // Último fallback: carpeta pública (no persistente si no hay Disk)
 }
 
 const db = new Database(dbPath);
