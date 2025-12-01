@@ -17,7 +17,21 @@ services:
         sync: false
       - key: DATA_DIR
         value: /data
-    disk:
-      name: data
-      mountPath: /data
-      sizeGB: 1
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: MAIL_TO
+        sync: false
+    # disk:               # Si tu plan permite Disk, descomenta y ajusta
+    #   name: data
+    #   mountPath: /data
+    #   sizeGB: 1

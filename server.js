@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
+import nodemailer from 'nodemailer';
 import bodyParser from 'body-parser';
 import multer from 'multer';
 import helmet from 'helmet';
@@ -149,6 +150,26 @@ app.use(
   })
 );
 
+// Email (SMTP)
+let transporter = null;
+try {
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = parseInt(process.env.SMTP_PORT || '0', 10);
+  const smtpSecure = (process.env.SMTP_SECURE === 'true') || smtpPort === 465;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  if (smtpHost && smtpPort && smtpUser && smtpPass) {
+    transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpSecure,
+      auth: { user: smtpUser, pass: smtpPass },
+    });
+  }
+} catch (e) {
+  console.warn('SMTP no configurado o inválido:', e?.message);
+}
+
 // Parsers
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -206,11 +227,23 @@ app.get('/blog/:slug', (req, res) => {
   if (!post) return res.status(404).render('404');
   res.render('post', { post });
 });
-app.post('/contacto', formLimiter, (req, res) => {
+app.post('/contacto', formLimiter, async (req, res) => {
   const name = clamp(req.body.name, 80);
-  const email = clamp(req.body.email, 120);
+  const emailAddr = clamp(req.body.email, 120);
   const message = clamp(req.body.message, 1000);
-  db.prepare('INSERT INTO contacts (name, email, message) VALUES (?, ?, ?)').run(name, email, message);
+  db.prepare('INSERT INTO contacts (name, email, message) VALUES (?, ?, ?)').run(name, emailAddr, message);
+  if (transporter) {
+    try {
+      const to = process.env.MAIL_TO || (res.locals.settings && res.locals.settings.email) || process.env.SMTP_USER;
+      const from = process.env.MAIL_FROM || 'GOOD DUCK <no-reply@goodduck.local>';
+      const subject = `Nuevo contacto desde GOOD DUCK: ${name}`;
+      const html = `<h2>Nuevo mensaje</h2><p><strong>Nombre:</strong> ${name}</p><p><strong>Email:</strong> ${emailAddr}</p><p><strong>Mensaje:</strong><br>${message}</p>`;
+      const text = `Nuevo mensaje\nNombre: ${name}\nEmail: ${emailAddr}\nMensaje:\n${message}`;
+      await transporter.sendMail({ from, to, subject, text, html });
+    } catch (err) {
+      console.error('Error enviando email:', err?.message);
+    }
+  }
   res.redirect('/?sent=1');
 });
 
