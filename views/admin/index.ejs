@@ -1,7 +1,7 @@
 <section style="padding:20px 0">
   <h1 style="color:#fff">Administración</h1>
   <form method="post" action="/admin/logout" style="margin:10px 0;">
-    <button class="btn" type="submit">Cerrar sesión</button>
+    <button class="btn primary" type="submit">Cerrar sesión</button>
   </form>
   <div style="margin:0 0 20px;display:flex;gap:10px;flex-wrap:wrap">
     <a href="/admin/settings" class="btn">Configuración</a>
@@ -11,10 +11,10 @@
     <div class="card">
       <h3>Ofertas</h3>
       <form method="post" action="/admin/offers" style="display:grid;gap:8px;margin-bottom:10px">
-        <input name="title" placeholder="Título" class="btn" style="background:#0b0f14" required />
-        <input name="slug" placeholder="Slug" class="btn" style="background:#0b0f14" required />
-        <input name="summary" placeholder="Resumen" class="btn" style="background:#0b0f14" />
-        <textarea name="content" placeholder="Contenido" class="btn" style="background:#0b0f14"></textarea>
+        <input name="title" placeholder="Título" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" required />
+        <input name="slug" placeholder="Slug" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" required />
+        <input name="summary" placeholder="Resumen" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" />
+        <textarea name="content" placeholder="Contenido" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c"></textarea>
         <button class="btn primary" type="submit">Crear</button>
       </form>
       <ul style="display:grid;gap:10px">
@@ -33,6 +33,16 @@
               </div>
             </div>
             <form method="post" action="/admin/offers/<%= o.id %>/delete"><button class="btn" type="submit">Eliminar</button></form>
+            <details style="grid-column:1/-1;margin-top:8px">
+              <summary style="cursor:pointer;color:#eaf1f7">Editar oferta</summary>
+              <form method="post" action="/admin/offers/<%= o.id %>/edit" style="display:grid;gap:8px;margin-top:8px">
+                <input name="title" value="<%= o.title %>" placeholder="Título" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" />
+                <input name="slug" value="<%= o.slug %>" placeholder="Slug" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" />
+                <input name="summary" value="<%= o.summary || '' %>" placeholder="Resumen" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" />
+                <textarea name="content" placeholder="Contenido" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c"><%= o.content || '' %></textarea>
+                <button class="btn primary" type="submit">Guardar cambios</button>
+              </form>
+            </details>
           </li>
         <% }) %>
       </ul>
@@ -40,10 +50,10 @@
     <div class="card">
       <h3>Posts</h3>
       <form method="post" action="/admin/posts" enctype="multipart/form-data" style="display:grid;gap:8px;margin-bottom:10px">
-        <input name="title" placeholder="Título" class="btn" style="background:#0b0f14" required />
-        <input name="slug" placeholder="Slug" class="btn" style="background:#0b0f14" required />
-        <input name="excerpt" placeholder="Extracto" class="btn" style="background:#0b0f14" />
-        <textarea name="content" placeholder="Contenido" class="btn" style="background:#0b0f14"></textarea>
+        <input name="title" placeholder="Título" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" required />
+        <input name="slug" placeholder="Slug" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" required />
+        <input name="excerpt" placeholder="Extracto" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" />
+        <textarea name="content" placeholder="Contenido" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c"></textarea>
         <input type="file" name="cover" />
         <button class="btn primary" type="submit">Publicar</button>
       </form>
@@ -51,7 +61,19 @@
         <% posts.forEach(p=>{ %>
           <li style="margin:6px 0;display:flex;justify-content:space-between;align-items:center;color:#9fb0c4">
             <span><strong style="color:#fff"><%= p.title %></strong> — <%= p.slug %></span>
-            <form method="post" action="/admin/posts/<%= p.id %>/delete"><button class="btn" type="submit">Eliminar</button></form>
+            <div style="display:flex;gap:8px;align-items:center">
+              <details>
+                <summary style="cursor:pointer;color:#eaf1f7">Editar</summary>
+                <form method="post" action="/admin/posts/<%= p.id %>/edit" style="display:grid;gap:8px;margin-top:8px">
+                  <input name="title" value="<%= p.title %>" placeholder="Título" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" />
+                  <input name="slug" value="<%= p.slug %>" placeholder="Slug" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" />
+                  <input name="excerpt" value="<%= p.excerpt || '' %>" placeholder="Extracto" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c" />
+                  <textarea name="content" placeholder="Contenido" style="background:#0b0f14;color:#eaf1f7;padding:10px;border-radius:10px;border:1px solid #1b222c"><%= p.content || '' %></textarea>
+                  <button class="btn primary" type="submit">Guardar cambios</button>
+                </form>
+              </details>
+              <form method="post" action="/admin/posts/<%= p.id %>/delete"><button class="btn" type="submit">Eliminar</button></form>
+            </div>
           </li>
         <% }) %>
       </ul>

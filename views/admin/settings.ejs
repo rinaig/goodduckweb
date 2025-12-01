@@ -25,6 +25,11 @@
       <label style="display:block;margin-bottom:4px">Email</label>
       <input class="btn" style="background:#0b0f14;width:100%" name="email" value="<%= settings.email || '' %>" />
     </div>
+    <div>
+      <label style="display:block;margin-bottom:4px">Imagen de portada (URL)</label>
+      <input class="btn" style="background:#0b0f14;width:100%" name="hero_image" value="<%= settings.hero_image || '' %>" />
+      <small style="color:#9fb0c4">Usa una URL pública o una de "Media" (copiar URL y pegar aquí). Ej: /static/uploads/xxxx.png</small>
+    </div>
     <button type="submit" class="btn primary">Guardar cambios</button>
   </form>
   <div style="margin-top:24px">

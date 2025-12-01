@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS settings (
   facebook TEXT,
   twitter TEXT,
   email TEXT,
+  hero_image TEXT,
   updated_at TEXT
 );
 `);
@@ -98,8 +99,8 @@ if (countOffers === 0) {
 // Seed settings row if missing
 const settingsRow = db.prepare('SELECT COUNT(*) as c FROM settings').get().c;
 if (settingsRow === 0) {
-  db.prepare('INSERT INTO settings (id, phone, whatsapp, instagram, facebook, twitter, email, updated_at) VALUES (1, ?, ?, ?, ?, ?, ?, ?)')
-    .run('+54 11 0000-0000', 'https://wa.me/541100000000', 'https://instagram.com/', 'https://facebook.com/', 'https://twitter.com/', 'info@goodduck.test', new Date().toISOString());
+  db.prepare('INSERT INTO settings (id, phone, whatsapp, instagram, facebook, twitter, email, hero_image, updated_at) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)')
+    .run('+54 11 0000-0000', 'https://wa.me/541100000000', 'https://instagram.com/', 'https://facebook.com/', 'https://twitter.com/', 'info@goodduck.test', '/static/img/diseñoapp_BAJADA.png', new Date().toISOString());
 }
 
 // View engine
@@ -119,8 +120,8 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use((req, res, next) => {
   let s = db.prepare('SELECT * FROM settings WHERE id = 1').get();
   if (!s) {
-    db.prepare('INSERT INTO settings (id, phone, whatsapp, instagram, facebook, twitter, email, updated_at) VALUES (1, ?, ?, ?, ?, ?, ?, ?)')
-      .run('+54 11 0000-0000', 'https://wa.me/541100000000', 'https://instagram.com/', 'https://facebook.com/', 'https://twitter.com/', 'info@goodduck.test', new Date().toISOString());
+    db.prepare('INSERT INTO settings (id, phone, whatsapp, instagram, facebook, twitter, email, hero_image, updated_at) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run('+54 11 0000-0000', 'https://wa.me/541100000000', 'https://instagram.com/', 'https://facebook.com/', 'https://twitter.com/', 'info@goodduck.test', '/static/img/diseñoapp_BAJADA.png', new Date().toISOString());
     s = db.prepare('SELECT * FROM settings WHERE id = 1').get();
   }
   res.locals.settings = s;
@@ -239,9 +240,9 @@ app.get('/admin/settings', requireAdmin, (req, res) => {
   res.render('admin/settings', { title: 'Configuración', settings });
 });
 app.post('/admin/settings', requireAdmin, (req, res) => {
-  const { phone, whatsapp, instagram, facebook, twitter, email } = req.body;
-  db.prepare('UPDATE settings SET phone=?, whatsapp=?, instagram=?, facebook=?, twitter=?, email=?, updated_at=? WHERE id=1')
-    .run(phone, whatsapp, instagram, facebook, twitter, email, new Date().toISOString());
+  const { phone, whatsapp, instagram, facebook, twitter, email, hero_image } = req.body;
+  db.prepare('UPDATE settings SET phone=?, whatsapp=?, instagram=?, facebook=?, twitter=?, email=?, hero_image=?, updated_at=? WHERE id=1')
+    .run(phone, whatsapp, instagram, facebook, twitter, email, hero_image, new Date().toISOString());
   res.redirect('/admin/settings');
 });
 // Offers CRUD
@@ -251,6 +252,15 @@ app.post('/admin/offers', requireAdmin, (req, res) => {
   const summary = clamp(req.body.summary, 240);
   const content = cleanHTML(req.body.content);
   db.prepare('INSERT INTO offers (title, slug, summary, content) VALUES (?, ?, ?, ?)').run(title, slug, summary, content);
+  res.redirect('/admin');
+});
+app.post('/admin/offers/:id/edit', requireAdmin, (req, res) => {
+  const title = clamp(req.body.title, 100);
+  const slug = cleanSlug(req.body.slug);
+  const summary = clamp(req.body.summary, 240);
+  const content = cleanHTML(req.body.content);
+  db.prepare('UPDATE offers SET title=?, slug=?, summary=?, content=?, updated_at=? WHERE id=?')
+    .run(title, slug, summary, content, new Date().toISOString(), req.params.id);
   res.redirect('/admin');
 });
 app.post('/admin/offers/:id/delete', requireAdmin, (req, res) => {
@@ -265,6 +275,15 @@ app.post('/admin/posts', requireAdmin, upload.single('cover'), (req, res) => {
   const content = cleanHTML(req.body.content);
   const cover = req.file ? `/static/uploads/${req.file.filename}` : null;
   db.prepare('INSERT INTO posts (title, slug, excerpt, content, cover) VALUES (?, ?, ?, ?, ?)').run(title, slug, excerpt, content, cover);
+  res.redirect('/admin');
+});
+app.post('/admin/posts/:id/edit', requireAdmin, (req, res) => {
+  const title = clamp(req.body.title, 120);
+  const slug = cleanSlug(req.body.slug);
+  const excerpt = clamp(req.body.excerpt, 280);
+  const content = cleanHTML(req.body.content);
+  db.prepare('UPDATE posts SET title=?, slug=?, excerpt=?, content=?, updated_at=? WHERE id=?')
+    .run(title, slug, excerpt, content, new Date().toISOString(), req.params.id);
   res.redirect('/admin');
 });
 app.post('/admin/posts/:id/delete', requireAdmin, (req, res) => {

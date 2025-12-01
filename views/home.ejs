@@ -10,8 +10,9 @@
     </div>
     <div class="hero-art">
       <picture style="display:block">
-        <source srcset="/static/img/diseñoapp_BAJADA.webp" type="image/webp" />
-        <img src="/static/img/diseñoapp_BAJADA.png" alt="Ilustración app" class="hero-image" />
+        <% const hero = (settings.hero_image || '/static/img/diseñoapp_BAJADA.png'); const heroWebp = hero.replace(/\.(png|jpe?g)$/i, '.webp'); %>
+        <source srcset="<%= heroWebp %>" type="image/webp" />
+        <img src="<%= hero %>" alt="Ilustración app" class="hero-image" />
       </picture>
     </div>
   </div>
